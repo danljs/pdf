@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.2.61/jspdf.debug.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-beta1/jquery.js"></script>
+
+    <title></title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+      function calendar(date) {
+        if(date == null) date = new Date();
+        day = date.getDate();
+        month = date.getMonth();
+        year = date.getFullYear();
+
+        months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        weeks = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+        this_month = new Date(year, month, 1);
+        next_month = new Date(year, month + 1, 1);
+
+        first_week_day = this_month.getDay();
+        days_in_this_month = Math.round((next_month.getTime() - this_month.getTime()) / (1000 * 60 * 60 * 24));
+
+        calendar_html = '<table id="cc" cstyle="background-color:666699; color:ffffff;">';
+        calendar_html += '<tr><td colspan="7" style="background-color:9999cc; color:000000; text-align: center;">' + months[month] + ' ' + year + '</td></tr>';
+
+        calendar_html += '<tr>';
+          weeks.forEach(function(c){
+            calendar_html += '<td style="background-color:9999cc; color:000000;">'+ c +'</td>';
+          });
+        calendar_html += '</tr>';
+
+        calendar_html += '<tr>';
+        for(week_day = 0; week_day < first_week_day; week_day++) {
+          calendar_html += '<td style="background-color:9999cc; color:000000;"> </td>';
+        }
+
+        week_day = first_week_day;
+        for(day_counter = 1; day_counter <= days_in_this_month; day_counter++) {
+          week_day %= 7;
+          if(week_day == 0) calendar_html += '</tr><tr>';
+
+          if(day == day_counter)
+            calendar_html += '<td style="text-align: center;"><b>' + day_counter + '</b></td>';
+          else
+            calendar_html += '<td style="background-color:9999cc; color:000000; text-align: center;"> ' + day_counter + ' </td>';
+            week_day++;
+        }
+
+        calendar_html += '</tr>';
+        calendar_html += '</table>';
+
+        calendar_html = '<div id="fromHTMLtestdiv">' + calendar_html + '</div>';
+        document.write(calendar_html);
+      }
+      calendar();
+      function dl(){
+        var doc = new jsPDF('p', 'pt', 'letter');
+        doc.rect(20, 20, 10, 10); // empty square
+        doc.rect(40, 20, 10, 10, 'F'); // filled square
+        doc.setDrawColor(255, 0, 0);
+        doc.rect(60, 20, 10, 10); // empty red square
+        doc.setDrawColor(255, 0, 0);
+        doc.rect(80, 20, 10, 10, 'FD'); // filled square with red borders
+        doc.setDrawColor(0);
+        doc.setFillColor(255, 0, 0);
+        doc.rect(100, 20, 10, 10, 'F'); // filled red square
+        doc.setDrawColor(0);
+        doc.setFillColor(255, 0, 0);
+        doc.rect(120, 20, 10, 10, 'FD'); // filled red square with black borders
+        doc.setDrawColor(0);
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(140, 20, 10, 10, 3, 3, 'FD'); //  Black sqaure with rounded corners
+        doc.save('Test.pdf');
+      }
+      function dl1(){
+        var pdf = new jsPDF('p', 'pt', 'letter')
+        , source = $('#fromHTMLtestdiv')[0]
+        , specialElementHandlers = {
+            '#bypassme': function(element, renderer){
+                return true
+            }
+        }
+
+        margins = {
+            top: 80,
+            bottom: 60,
+            left: 40,
+            width: 522
+          };
+        pdf.fromHTML(
+            source
+            , margins.left
+            , margins.top
+            , {
+                'width': margins.width
+                , 'elementHandlers': specialElementHandlers
+            },
+            function (dispose) {
+                pdf.save('Test.pdf');
+              },
+            margins
+          )
+      }
+    </script>
+    <button onclick="dl()">download</button>
+    <button onclick="javascript:dl1()">download1</button>
+  </body>
+</html>

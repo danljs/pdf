@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple example</title>
+</head>
+<body>
+<button onclick="monthly_report()">Monthly Report</button>
+<button onclick="bb()">Weekly Report</button>
+<button onclick="daily_report()">daily Report</button>
+<button onclick="custom_report()">Customize Report</button>
+<script type="text/javascript" src="vendor/jspdf.min.js"></script>
+<script src="vendor/jspdf.plugin.autotable.src.js"></script>
+<script src="vendor/moment.js"></script>
+<script src="faker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-beta1/jquery.js"></script>
+
+<script>
+    function monthly_report(date) {
+      !!!date ? date = new Date() : date;
+
+      var months = ['January','February','March','April','May','June',
+                    'July','August','September','October','November','December'],
+          weeks = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      
+      var day = date.getDate(),
+          month = date.getMonth(),
+          year = date.getFullYear();
+
+      this_month = new Date(year, month, 1);
+      next_month = new Date(year, month + 1, 1);
+
+      first_week_day = this_month.getDay();
+      days_in_this_month = Math.round((next_month.getTime() - this_month.getTime()) / (1000 * 60 * 60 * 24));
+      
+      var monthly_data = [];
+      monthly_data.push([]);
+      for(week_day = 0; week_day < first_week_day; week_day++) {
+        monthly_data[monthly_data.length-1].push('');
+      }
+
+      week_day = first_week_day;
+      for(day_counter = 1; day_counter <= days_in_this_month; day_counter++) {
+        week_day %= 7;
+        week_day === 0 ? monthly_data.push([]):'';
+        monthly_data[monthly_data.length-1].push(day_counter + '\nsdjfhklsdfh\nsdjffh\nsdjopoofhklsdfh\nsdjfhklsdfh\nsdjffh\nsdjopoofhklsdfh');
+        week_day++;
+      }
+
+      var doc = new jsPDF('p', 'pt');
+      var header = function (data) {
+        doc.setFontSize(20);
+        doc.setTextColor(40);
+        doc.setFontStyle('normal');
+        doc.text(months[month] + ' ' + year, data.settings.margin.left + 35, 60);
+      };
+
+      var totalPagesExp = "{total_pages_count_string}";
+      var footer = function (data) {
+        var str = "Page " + data.pageCount + " of " + totalPagesExp;
+        doc.text(str, data.settings.margin.left, doc.internal.pageSize.height - 30);
+      };
+
+      var options = {
+        beforePageContent: header,
+        afterPageContent: footer,
+        margin: {top: 80, left: 15},
+        styles: {
+          lineColor: [44, 62, 80],
+          lineWidth: 2,
+          overflow: 'hidden',
+          columnWidth: 80,
+          rowHeight: 50
+        },
+        headerStyles: {rowHeight: 30},
+        bodyStyles: {textColor: 100},
+        alternateRowStyles: {},
+        columnStyles: {},
+        createdCell: function (cell, data) {}
+      }
+
+      doc.autoTable(weeks, monthly_data,options);
+      doc.putTotalPages(totalPagesExp);
+
+      doc.save("monthly.pdf");
+    }
+
+    function bb(){
+      $.getJSON( "data.json", function(data){
+          var reports = data.reports ;
+          var weekly_data = {}
+          reports.map(function(e,i){
+            var d = moment(e.start).format('YYYYMMDD');
+            !!!weekly_data[d] ? weekly_data[d] = []:'';
+            weekly_data[d].push(
+              e.name + '\n' + 
+              e.phone + '\n' + 
+              moment(e.start).format('HH:mm'));
+          })
+          weekly_report('',weekly_data);
+       });
+    }
+
+    function weekly_report(date,weekly_data) {
+      moment.locale('en-gb');
+      moment.locale('en-custom', {
+          week: {
+              dow: 7,
+              doy: 6
+          }
+      });
+
+      !!!date ? date = new Date() : date;
+      
+      var months = ['January','February','March','April','May','June',
+                    'July','August','September','October','November','December'],
+          headers = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      
+      var day = date.getDate(),
+          month = date.getMonth(),
+          year = date.getFullYear(),
+          week_start = moment(date).weekday(0),
+          week_end = moment(date).weekday(6),
+          title = week_start.format('MMM Do' + (week_start.year() === week_end.year() ? '' : ',YYYY')) + ' - ' + week_end.format('MMM Do,YYYY')
+          ;
+      for(var i = 0 ; i < 7 ; i++){
+        headers[i] = headers[i] + ' ' + week_start.add(1,'days').format('MM/DD');
+      }
+
+      var doc = new jsPDF('p', 'pt');
+      var header = function (data) {
+        doc.setFontSize(20);
+        doc.setTextColor(40);
+        doc.setFontStyle('normal');
+        doc.text(title, data.settings.margin.left + 35, 60);
+      };
+
+      var totalPagesExp = "{total_pages_count_string}";
+      var footer = function (data) {
+        var str = "Page " + data.pageCount + " of " + totalPagesExp;
+        doc.text(str, data.settings.margin.left, doc.internal.pageSize.height - 30);
+      };
+
+      var options = {
+        beforePageContent: header,
+        afterPageContent: footer,
+        margin: {top: 80, left: 15},
+        styles: {
+          lineColor: [44, 62, 80],
+          lineWidth: 2,
+          overflow: 'hidden',
+          columnWidth: 80,
+          rowHeight: 20
+        },
+        headerStyles: {rowHeight: 30},
+        bodyStyles: {textColor: 100},
+        alternateRowStyles: {},
+        columnStyles: {},
+        createdCell: function (cell, data) {},
+        drawHeaderCell: function (cell, data) {}
+      }
+
+      var dts = [];
+      var maxRows = 0 ;
+      var maxCols = 0 ;
+      for (var key in weekly_data) {
+        maxRows = maxRows < weekly_data[key].length ? weekly_data[key].length : maxRows;
+        maxCols++;
+        dts.push(weekly_data[key]);
+      }
+      var dtss = [];
+      for(var i = 0 ; i < maxRows ; i++){
+        dtss.push([]);
+        for(var j = 0 ; j < maxCols ; j++){
+          dtss[i].push(dts[j][i]);
+        }  
+      }
+      console.log(dtss);
+
+      doc.autoTable(headers, dtss,options);
+      doc.putTotalPages(totalPagesExp);
+
+      doc.save("weekly.pdf");
+    }
+
+    function daily_report(){
+      $.getJSON( "data.json", function(data){
+        var reports = data.reports ;
+        var weekly_data = [];
+        reports.map(function(e,i){
+          weekly_data.push({
+            date : moment(e.start).format('MM/DD/YYYY'),
+            start : moment(e.start).format('HH:mm a'),
+            name : e.name,
+            email : e.email,
+            phone : e.phone,
+            comment : (function(o){
+              var a = o.split('\n').map(function(c,k){return c.split(':')[1];});
+              a.pop();
+              return a.toString().replace(',','\n');
+            }(e.other))
+          });
+        })
+        var data = getData(140);
+        report(weekly_data, new Date('2016/05/01'), new Date('2016/05/08'), 'Cachet-Orageville');
+     });
+    }
+
+    function report(data, from, to, projectName) {
+      var doc = new jsPDF('l', 'pt');
+      var pageHeight = doc.internal.pageSize.height;
+      var pageWidth = doc.internal.pageSize.width;
+      var totalPagesExp = "{total_pages_count_string}";
+      var fontSize = 12 ;
+
+      var header = function (data) {
+        doc.setFontSize(fontSize);
+        doc.setTextColor(40);
+        doc.setFontStyle('normal');
+        var x = data.settings.margin.left ;
+        var y = 60 ;
+
+        var str = "private + confidential | " + data.pageCount + " of " + totalPagesExp;
+        doc.text(str, x, y);
+        str = ' | appointment booking report | ' + moment(from).format('MMM D') + ' to ' + moment(to).format('MMM D,YYYY')
+        x = pageWidth - getWidth(str) - data.settings.margin.right
+        doc.text(str, x, y);
+        str = projectName;
+        x -= getWidth(str);
+        doc.setTextColor(87, 182, 233);
+        doc.text(str, x, y);
+      };
+      
+      var footer = function (data) {
+        var x = data.settings.margin.left ;
+        var y = pageHeight - 30 ;
+
+        var str ='POWERED BY ';
+        doc.setFillColor(244, 244, 244);
+        doc.rect(10, y - 25, pageWidth - 20 , 40, 'F');
+
+        doc.setTextColor(100);
+        doc.text(str, x, y); 
+        x += getWidth(str) - 10;
+        str ='montana';
+        doc.setTextColor(0);
+        doc.text(str, x, y); 
+        x += getWidth(str) - 6;
+        str ='steele';
+        doc.setTextColor(87, 182, 233);
+        doc.text(str, x, y);
+      };
+
+      var getWidth = function(str){return doc.getStringUnitWidth(str) * fontSize;};
+
+      var options = {
+        beforePageContent: header,
+        afterPageContent: footer,
+        margin: {top: 80, bottom: 80},
+        theme: 'grid',
+        styles: {
+            fillStyle: 'DF',
+            lineColor: [169, 169, 169],
+            lineWidth: 0.2
+        },
+        headerStyles: {
+          fillColor: [244, 244, 244],
+          textColor: 100,
+          fontStyle: 'normal',
+          rowHeight: 30,
+          halign: 'center',
+          valign: 'middle'
+        },
+        columnStyles: {
+          date: {columnWidth: 91},
+          start: {columnWidth: 91},
+          name: {columnWidth: 100},
+          email: {columnWidth: 140},
+          phone: {columnWidth: 91},
+          comment: {columnWidth: 250}
+        },
+        bodyStyles: {rowHeight: 20},
+        createdCell: function (cell, data) {
+          // if (data.column.dataKey === 'date' || data.column.dataKey === 'start') {
+          //     cell.styles.halign = 'center';
+          // }
+        },
+        drawRow: function (row, data) {},
+        drawCell: function (cell, data) {}
+      };
+
+      doc.autoTable(getColumns(), data, options);
+      doc.putTotalPages(totalPagesExp);
+      doc.save("daily.pdf");
+    }
+
+var getColumns = function () {
+    return [
+        {title: "Appointment Date", dataKey: "date"},
+        {title: "Appointment Time", dataKey: "start"},
+        {title: "Name", dataKey: "name"},
+        {title: "Email", dataKey: "email"},
+        {title: "Phone Number", dataKey: "phone"},
+        {title: "Booking Comments", dataKey: "comment"}
+    ];
+};
+
+// Uses the faker.js library to get random data.
+function getData(rowCount) {
+    rowCount = rowCount || 4;
+    var sentence = faker.lorem.words(12);
+    var data = [];
+    for (var j = 1; j <= rowCount; j++) {
+      var dt = faker.date.past() ;
+        data.push({
+            date: moment(dt).format('MM/DD/YYYY'),
+            name: faker.name.findName(),
+            email: faker.internet.email(),
+            start: moment(dt).format('HH:mm a'),
+            phone: faker.phone.phoneNumber(),
+            comment: shuffleSentence(sentence)
+        });
+    }
+    return data;
+}
+function shuffleSentence(words) {
+    words = words || faker.lorem.words(8);
+    var str = faker.helpers.shuffle(words).join(' ').trim();
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function custom_report(){
+  var doc = new jsPDF('p', 'pt', 'letter');
+  var settings = {
+    margin : {top : 20, right : 20, bottom : 20, left : 20},
+    rowHeight : 30,
+    cellPadding : 10,
+    columnStyles: {
+      date: {title:'date', columnWidth: 70},
+      start: {title:'start', columnWidth: 70},
+      name: {title:'name', columnWidth: 100},
+      email: {title:'email', columnWidth: 100},
+      phone: {title:'phone', columnWidth: 90},
+      comment: {title:'comment', columnWidth: 150}
+    }
+  };
+
+  var pageHeight = doc.internal.pageSize.height;
+  var pageWidth = doc.internal.pageSize.width;
+
+  var cursor = {
+    x : settings.margin.left ,
+    y : settings.margin.top 
+  };
+  printHeader();
+
+  var columns = getColumns();
+  var data = getData(40);
+  printRowHeader();
+  // data.map(function(e,i){
+  //   printRow(e);
+  //   handlePage();
+  // });
+  printFooter();
+  doc.save("custom.pdf");
+
+  function getWidth(str,fontSize){
+    return doc.getStringUnitWidth(str) * !!!fontSize ? 12 : fontSize ;
+  }
+  function printOneRow(cells,fontStyle){
+    cursor.x = settings.margin.left;
+    for (var i = 0; i < columns.length; i++) {
+      var column = columns[i];
+      var cell = cells[i];
+      if (!cell) {continue;}
+      var columnWidth = settings.columnStyles[column.dataKey].columnWidth ;
+      doc.rect(cursor.x, cursor.y, columnWidth, settings.rowHeight);
+      doc.setFontSize(fontStyle.size);
+      doc.setFont(fontStyle.font);
+      doc.setFontType(fontStyle.type);
+      var w = getWidth(cell, fontStyle.size);
+
+      var textSpace = columnWidth - settings.cellPadding * 2;
+
+      cell = doc.splitTextToSize(cell, textSpace + 1, { fontSize: fontStyle.size });
+      var splitRegex = /\r\n|\r|\n/g;
+      cell = typeof cell === 'string' ? cell.split(splitRegex) : cell;
+      // cell.split(splitRegex) ;
+      doc.text(cursor.x + settings.cellPadding , cursor.y + settings.rowHeight / 2, cell);
+      cursor.x += columnWidth;
+    }
+    cursor.y += settings.rowHeight;
+  }
+  
+
+  function handlePage(){
+    if(cursor.y + settings.rowHeight >= doc.internal.pageSize.height){
+      printFooter();
+      doc.addPage();
+      cursor.y = settings.margin.top;
+      printHeader();
+      printRowHeader();
+    }
+  }
+  function printRow(r){
+    var fontStyle = {size : 8, font : 'courier', type : 'normal'};
+    printOneRow(Object.keys(r).map(function(k){ return r[k]}),fontStyle)
+  }
+  function printRowHeader(){
+    var fontStyle = {size : 12, font : 'courier', type : 'normal'};
+    var c = settings.columnStyles;
+    printOneRow(Object.keys(c).map(function(k){ return c[k].title}),fontStyle);
+  }
+  function printHeader(){
+    var from = new Date();
+    var to = new Date();
+    var projectName = 'ZheJiangLeiSheng';
+    var pageCount = 1, totalPagesExp = 2;
+    var fontSize = 12
+    doc.setFontSize(fontSize);
+    doc.setTextColor(40);
+    doc.setFontStyle('normal');
+    var x = settings.margin.left ;
+    var y = 60 ;
+
+    var str = "private + confidential | " + pageCount + " of " + totalPagesExp;
+    doc.text(str, x, y);
+    str = ' | appointment booking report | ' + moment(from).format('MMM D') + ' to ' + moment(to).format('MMM D,YYYY');
+    x = pageWidth - getWidth(str) - settings.margin.right;
+    doc.text(str, x, y);
+    str = projectName;
+    x -= getWidth(str);
+    // doc.setTextColor(87, 182, 233);
+    doc.text(str, x, y);
+  }
+  function printFooter(){
+    var x = settings.margin.left ;
+    var y = pageHeight - 30 ;
+
+    var str ='POWERED BY ';
+    doc.setFillColor(244, 244, 244);
+    doc.rect(10, y - 25, pageWidth - 20 , 40, 'F');
+
+    doc.setTextColor(100);
+    doc.text(str, x, y); 
+    x += getWidth(str) - 10;
+    str ='montana';
+    doc.setTextColor(0);
+    doc.text(str, x, y); 
+    x += getWidth(str) - 6;
+    str ='steele';
+    doc.setTextColor(87, 182, 233);
+    doc.text(str, x, y);
+  }
+
+  var Table = function Table() {
+        babelHelpers.classCallCheck(this, Table);
+
+        this.height = 0;
+        this.width = 0;
+        this.contentWidth = 0;
+        this.rows = [];
+        this.columns = [];
+        this.headerRow = null;
+        this.settings = {};
+        this.pageCount = 1;
+    };
+
+    var Row = function Row(raw) {
+        babelHelpers.classCallCheck(this, Row);
+
+        this.raw = raw || {};
+        this.index = 0;
+        this.styles = {};
+        this.cells = {};
+        this.height = 0;
+        this.y = 0;
+    };
+
+    var Cell = function Cell(raw) {
+        babelHelpers.classCallCheck(this, Cell);
+
+        this.raw = raw;
+        this.styles = {};
+        this.text = '';
+        this.contentWidth = 0;
+        this.textPos = {};
+        this.height = 0;
+        this.width = 0;
+        this.x = 0;
+        this.y = 0;
+    };
+
+    var Column = function Column(dataKey) {
+        babelHelpers.classCallCheck(this, Column);
+
+        this.dataKey = dataKey;
+        this.options = {};
+        this.styles = {};
+        this.contentWidth = 0;
+        this.width = 0;
+        this.x = 0;
+    };
+}
+
+</script>
+</body>
+</html>
