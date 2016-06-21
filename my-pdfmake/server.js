@@ -5,9 +5,16 @@ var http = require('http'),
     pdfMakePrinter = require('pdfmake/src/printer');
 
 var app = express();
+
 var rootDir = path.resolve(path.dirname(module.uri));
 
 app.use(express.static(rootDir));
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+
 
 app.get('/', function(req, res) {})
 
@@ -37,6 +44,30 @@ app.get('/pdf', function (req, res) {
 
 	var docDefinition = { 
 		content: [
+      { text: 'Tables', style: 'header' },
+      '和This is an sample PDF printed with pdfMake和',
+      {
+        style: 'tableExample',
+        table: {
+          body: [
+            [
+              { text: 'Column 1', style: 'tableHeader', alignment: 'center' },
+              { text: 'Column 2', style: 'tableHeader', alignment: 'center' },
+              { text: 'Column 3', style: 'tableHeader', alignment: 'center' }
+            ],
+            ['One value goes here王', 'Another one here王', 'OK王?']
+          ]
+        }
+      },
+      'You can also fit the image inside a rectangle',
+      {
+        // image: 'sampleImage.jpg',
+        // fit: [100, 100],
+        text: 'YouYouYouYouYouYou',
+        pageBreak: 'after'
+      },
+      
+      // { text: 'noBorders:', fontSize: 14, bold: true, pageBreak: 'before', margin: [0, 0, 0, 8] },
       { text: 'Tables', style: 'header' },
       '和This is an sample PDF printed with pdfMake和',
       {
